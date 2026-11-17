@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "deck.inbox",
+  "name": "Deck Inbox",
+  "version": "1.0.0",
+  "author": "Andrew",
+  "license": "MIT",
+  "description": "Copy selected documents to the deck factory inbox (~/Decks).",
+  "kinds": ["menu-action"],
+  "entryPoints": {"run": "bin/run"},
+  "menuActions": [
+    {
+      "id": "send",
+      "label": "Copy to Decks",
+      "glyph": "download",
+      "menus": ["file"],
+      "when": {"minItems": 1, "maxItems": 512, "folders": false}
+    }
+  ],
+  "access": ["selection", "write:selection"],
+  "schema": [
+    {
+      "key": "destination",
+      "label": "Destination folder",
+      "type": "string",
+      "defaultValue": "~/Decks",
+      "placeholder": "~/Decks"
+    },
+    {
+      "key": "move",
+      "label": "Move instead of copy",
+      "type": "boolean",
+      "defaultValue": false,
+      "hint": "Off keeps the original where it is."
+    }
+  ]
+}

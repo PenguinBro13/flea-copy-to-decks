@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""Send the selected documents to the deck factory inbox.
+
+Flea menu action: file menu -> "Copy to Decks". Copies (or moves, by setting)
+.docx/.txt/.md/.pptx/.potx files into the destination folder, default ~/Decks,
+which is a symlink to ~/Work/pptx/inbox. Existing names are never overwritten.
+"""
+import json
+import os
+import shutil
+import sys
+
+ALLOWED = {".docx", ".txt", ".md", ".markdown", ".pptx", ".potx"}
+MAX_MESSAGE = 4096
+
+
+def answer(value):
+    print(json.dumps(value), flush=True)
+
+
+def resolve_destination(settings):
+    raw = (settings.get("destination") or "~/Decks").strip() or "~/Decks"
+    path = os.path.realpath(os.path.expanduser(raw))
+    if not os.path.isdir(path):
+        raise ValueError(f"Destination {raw} does not exist.")
+    if not os.access(path, os.W_OK):
+        raise ValueError(f"Destination {raw} is not writable.")
+    return path
+
+
+def unique_target(destination, name):
+    stem, extension = os.path.splitext(name)
+    candidate = os.path.join(destination, name)
+    counter = 2
+    while os.path.lexists(candidate):
+        candidate = os.path.join(destination, f"{stem}-{counter}{extension}")
+        counter += 1
+    return candidate
+
+
+def send(request):
+    settings = request.get("settings") or {}
+    paths = request.get("paths") or []
+    if not paths or len(paths) > 512:
+        raise ValueError("Choose between 1 and 512 files.")
+    destination = resolve_destination(settings)
+    move = bool(settings.get("move", False))
+
+    rejected, sources = [], []
+    for path in paths:
+        if not isinstance(path, str) or not os.path.isabs(path):
+            raise ValueError("Expected absolute selected file paths.")
+        name = os.path.basename(path)
+        if os.path.isdir(path):
+            rejected.append(f"{name}: folders are not supported")
+        elif os.path.splitext(name)[1].lower() not in ALLOWED:
+            rejected.append(f"{name}: unsupported type")
+        elif os.path.realpath(os.path.dirname(path)) == destination:
+            rejected.append(f"{name}: already in Decks")
+        else:
+            sources.append(path)
+
+    sent, failures = 0, []
+    step = max(1, (len(sources) + 127) // 128)
+    for completed, source in enumerate(sources, 1):
+        name = os.path.basename(source)
+        try:
+            target = unique_target(destination, name)
+            if move:
+                shutil.move(source, target)
+            else:
+                shutil.copy2(source, target)
+            sent += 1
+        except OSError as error:
+            failures.append(f"{name}: {error.strerror or error}")
+        if completed == len(sources) or completed % step == 0:
+            answer({"op": "progress", "done": completed, "total": len(sources),
+                    "message": name})
+
+    verb = "moved" if move else "copied"
+    problems = failures + rejected
+    if problems and not sent:
+        raise ValueError(problems[0][:MAX_MESSAGE])
+    if problems:
+        summary = f"{sent} {verb} to Decks; skipped " + "; ".join(problems)
+        raise ValueError(summary[:MAX_MESSAGE])
+    noun = "file" if sent == 1 else "files"
+    answer({"op": "done", "message": f"{sent} {noun} {verb} to Decks."})
+
+
+for line in iter(lambda: sys.stdin.buffer.readline(65538), b""):
+    if len(line) > 65536:
+        break
+    try:
+        request = json.loads(line)
+        operation = request.get("op")
+        if operation == "hello":
+            answer({"op": "ready", "protocolVersion": 1})
+        elif operation == "cancel":
+            break
+        elif operation == "settings":
+            answer({"op": "done"})
+        elif operation == "run" and request.get("action") == "send":
+            send(request)
+        else:
+            answer({"op": "error", "message": "Unsupported action."})
+    except (ValueError, OSError, TypeError) as error:
+        answer({"op": "error", "message": str(error)[:MAX_MESSAGE]})
