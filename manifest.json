@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "deck.inbox",
   "name": "Deck Inbox",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Andrew",
   "license": "MIT",
   "description": "Copy selected documents to the deck factory inbox (~/Decks).",

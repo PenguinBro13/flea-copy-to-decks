@@ -56,7 +56,7 @@ def send(request):
         elif os.path.splitext(name)[1].lower() not in ALLOWED:
             rejected.append(f"{name}: unsupported type")
         elif os.path.realpath(os.path.dirname(path)) == destination:
-            rejected.append(f"{name}: already in Decks")
+            rejected.append(f"{name}: already in the destination")
         else:
             sources.append(path)
 
@@ -82,10 +82,10 @@ def send(request):
     if problems and not sent:
         raise ValueError(problems[0][:MAX_MESSAGE])
     if problems:
-        summary = f"{sent} {verb} to Decks; skipped " + "; ".join(problems)
+        summary = f"{sent} {verb}; skipped " + "; ".join(problems)
         raise ValueError(summary[:MAX_MESSAGE])
     noun = "file" if sent == 1 else "files"
-    answer({"op": "done", "message": f"{sent} {noun} {verb} to Decks."})
+    answer({"op": "done", "message": f"{sent} {noun} {verb}."})
 
 
 for line in iter(lambda: sys.stdin.buffer.readline(65538), b""):

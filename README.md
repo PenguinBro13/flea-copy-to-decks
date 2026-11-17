@@ -30,7 +30,7 @@ mkdir -p ~/Decks
   not duplicated.
 - Never overwrites: a repeated name becomes `brief-2.docx`, then `brief-3.docx`.
 - Hidden for folders, so it cannot fire on a directory selection.
-- Reports per-file progress and finishes with `2 files copied to Decks.`
+- Reports per-file progress and finishes with `2 files copied.`
 
 ## Settings
 
